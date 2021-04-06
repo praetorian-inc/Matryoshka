@@ -1,8 +1,6 @@
 # Overview
 Matryoshka loader is a tool that red team operators can leverage to generate shellcode for an egghunter to bypass size-limitations and performance issues commonly associated with VBA or Excel 4.0 macro payloads when creating Microsoft Office documents for targeted phishing attacks.
 
-TODO: Need to add reference to blog post once published.
-
 # Usage
 The builder supports the following set of arguments. The user must supply an egg value along with the required architecture for the egghunter shellcode. When invoked the egghunter will search through the process memory to identify the egg, copies it to RWX memory, and then transfers control to it.
 
@@ -30,4 +28,3 @@ Matryoshka consists of two primary components. The first is the core loader writ
 - builder: The builder directory contains the source code for the builder.
 
 # References
-[1] https://TODO-LINK-TO-BLOG-POST.praetorian.com/TODO
