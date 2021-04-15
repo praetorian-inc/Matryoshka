@@ -1,7 +1,7 @@
 /**
  * @file apis.h
  *
- * @brief Code for position independent resolution of APIs by hash value
+ * @brief Code for position independent resolution of APIs by name
  *
  * Uses standard trick of using PEB to get base address of required DLLs
  * and then iterating over export address table to resolve addresses
