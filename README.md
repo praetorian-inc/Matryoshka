@@ -28,4 +28,4 @@ Matryoshka consists of two primary components. The first is the core loader writ
 - builder: The builder directory contains the source code for the builder.
 
 # References
-[1] https://www.praetorian.com/blog/red-team-privilege-escalation-rbcd-based-privilege-escalation-part-2/
+[1] https://www.praetorian.com/blog/red-team-tooling-writing-custom-shellcode/

