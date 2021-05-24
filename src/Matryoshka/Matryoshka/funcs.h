@@ -2,6 +2,16 @@
 
 #include <Windows.h>
 
+typedef HANDLE(WINAPI* CreateThread_T)
+(
+	LPSECURITY_ATTRIBUTES   lpThreadAttributes,
+	SIZE_T                  dwStackSize,
+	LPTHREAD_START_ROUTINE  lpStartAddress,
+	LPVOID                  lpParameter,
+	DWORD                   dwCreationFlags,
+	LPDWORD                 lpThreadId
+);
+
 typedef HMODULE(WINAPI* LoadLibrary_T)
 (
 	PCHAR lpFileName
@@ -10,7 +20,7 @@ typedef HMODULE(WINAPI* LoadLibrary_T)
 typedef FARPROC(WINAPI* GetLastError_T)();
 
 typedef FARPROC(WINAPI* GetProcAddress_T)
-(
+( 
 	HMODULE hModule,
 	PCHAR  lpProcName
 );
