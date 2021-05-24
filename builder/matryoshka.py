@@ -187,14 +187,24 @@ def main():
 		'-e', '--output-egg', help="Path to write Egg value to", required=True
 	)
 	parser.add_argument(
+<<<<<<< HEAD
 		'-n', '--no-spawn-thread', help="Do not spawn a new thread when running the stager (may cause stability issues)", action='store_true', required=False
+=======
+		'-t', '--spawn-thread', help="Spawn a new thread when running the stager", action='store_true', required=False
+>>>>>>> 55de26dbdeb011f74c464b00e8f00902aa80daf6
 	)
 	
 	args = parser.parse_args()
 
+<<<<<<< HEAD
 	flags = 1
 	if args.no_spawn_thread:
 		flags = 0
+=======
+	flags = 0
+	if args.spawn_thread:
+		flags = 1
+>>>>>>> 55de26dbdeb011f74c464b00e8f00902aa80daf6
 
 	with open(args.shellcode, 'rb') as shellcode:
 		print("[+] Opening the shellcode file specified by the user")
