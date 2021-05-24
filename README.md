@@ -5,7 +5,7 @@ Matryoshka loader is a tool that red team operators can leverage to generate she
 The builder supports the following set of arguments. The user must supply an egg value along with the required architecture for the egghunter shellcode. When invoked the egghunter will search through the process memory to identify the egg, copies it to RWX memory, and then transfers control to it.
 
 ```
-usage: matryoshka.py [-h] -s SHELLCODE -a ARCHITECTURE -o OUTPUT_SHELLCODE -e OUTPUT_EGG
+usage: matryoshka.py [-h] -s SHELLCODE -a ARCHITECTURE -o OUTPUT_SHELLCODE -e OUTPUT_EGG [-n]
 
 Matryoshka Loader Shellcode Generator
 
@@ -19,6 +19,8 @@ optional arguments:
                         Path to write Matryoshka shellcode to
   -e OUTPUT_EGG, --output-egg OUTPUT_EGG
                         Path to write Egg value to
+  -n, --no-spawn-thread
+                        Do not spawn a new thread when running the stager (may cause stability issues)
 ````
 
 # Directory Structure
